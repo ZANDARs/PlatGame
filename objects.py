@@ -44,6 +44,7 @@ class Player_Test(Game_Sprite_Test):
         if not self.is_jumping:
             self.is_jumping = True
             self.velocity = -self.jump_height
+            self.rect.y -= 5
 
     def apply_gravity(self):
         if not self.on_obstacle:  # Якщо не на перешкоді, застосовуй гравітацію
@@ -51,16 +52,17 @@ class Player_Test(Game_Sprite_Test):
             self.rect.centery += self.velocity
 
         # Перевірка на зіткнення з підлогою
-        if self.rect.centery >= win_height - self.rect.height + 50:
-            self.rect.centery = win_height - self.rect.height + 50
+        if self.rect.centery >= win_height - self.rect.height:
+            self.rect.centery = win_height - self.rect.height
             self.is_jumping = False
             self.velocity = 0
 
     def stop(self):
         # Зупинка тільки якщо на перешкоді
+        #self.rect.centery -= 1
         self.velocity = 0
         self.is_jumping = False
-        self.on_obstacle = True  # Вказує, що персонаж на перешкоді
+        self.on_obstacle = True# Вказує, що персонаж на перешкоді
 
     def update(self):
         self.hitbox.center = self.rect.center
@@ -91,20 +93,66 @@ class Player_Test(Game_Sprite_Test):
         pass
 
 class Level(pygame.sprite.Sprite):
-    def __init__(self, x, y, width, height, color):
+    def __init__(self, x, y, width, height, image, dead=False):
         super().__init__()
 
         self.x = x
         self.y = y
         self.width = width
         self.height = height
-        self.color = color
+        #self.color = color
 
-        self.image = pygame.Surface((width, height))
-        self.image.fill(self.color)
+        self.image = pygame.transform.scale(pygame.image.load(image), (width, height))
+        #self.image.fill(self.color)
+        self.startimage = self.image
 
         self.rect = self.image.get_rect()
         self.rect.center = x, y
+        self.dead = dead
 
+    def draw(self):
+        win.blit(self.image, self.rect)
+
+class Button(pygame.sprite.Sprite):
+    def __init__(self, x, y, width, height, text, color, callback):
+        super().__init__()
+        self.x = x
+        self.y = y
+        self.text = text
+        self.color = color
+        r = min(color[0] + 15, 255)
+        g = min(color[1] + 15, 255)
+        b = min(color[2] + 15, 255)
+        self.light_color = (r, g, b)
+        self.callback = callback
+        self.pressed = False
+
+        self.image = pygame.Surface((width, height))
+        self.rect = self.image.get_rect()
+        self.rect.center = x, y
+        self.image.fill(self.color)
+        self.text_surface = text
+        self.label_rect = self.text_surface.get_rect()
+        self.label_rect.centerx = width / 2
+        self.label_rect.centery = height / 2
+        self.image.blit(self.text_surface, self.label_rect)
+
+    def is_on(self):
+        x, y = pygame.mouse.get_pos()
+        on = self.rect.collidepoint(x, y)
+        if on:
+            self.image.fill(self.light_color)
+        else:
+            self.image.fill(self.color)
+        return on
+
+    def clicked(self):
+        if self.is_on() and pygame.mouse.get_pressed()[0] and not self.pressed:
+            self.pressed = True
+            self.callback()
+        self.pressed = False
+    def update(self):
+        self.clicked()
+        self.image.blit(self.text_surface, self.label_rect)
     def draw(self):
         win.blit(self.image, self.rect)
